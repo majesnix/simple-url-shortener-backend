@@ -31,7 +31,7 @@ libraryDependencies ++= Seq(
   "org.http4s" %% "http4s-ember-server" % http4sVersion,
   "org.http4s" %% "http4s-circe" % http4sVersion,
   "org.http4s" %% "http4s-dsl" % http4sVersion,
-  "org.typelevel" %% "cats-effect" % "3.4.8",
+  "org.typelevel" %% "cats-effect" % "3.5.3",
   "io.circe" %% "circe-generic" % circeVersion,
   "io.circe" %% "circe-literal" % circeVersion,
   "org.tpolecat" %% "skunk-core" % "0.6.2",
