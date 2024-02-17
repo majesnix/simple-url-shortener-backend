@@ -20,7 +20,7 @@ object Database {
     )
 
   def migrate(): IO[Unit] = for {
-    _ <- IO(
+    _ <- IO {
       Flyway
         .configure()
         .dataSource(
@@ -31,7 +31,7 @@ object Database {
         )
         .load()
         .migrate()
-    )
+    }
   } yield ()
 
 }
