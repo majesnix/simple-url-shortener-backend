@@ -2,7 +2,6 @@ package com.majesnix.sus
 
 import cats.data.Kleisli
 import cats.effect.IO
-import cats.implicits.catsSyntaxApplicativeId
 import com.majesnix.sus.NanoId.generateId
 import com.majesnix.sus.models.Url.valid
 import com.majesnix.sus.models.{CreateShortUrlResponse, Url}
@@ -17,7 +16,6 @@ import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.slf4j.Slf4jFactory
 
 import scala.language.postfixOps
-import scala.util.Random
 
 object UrlRoutes {
   implicit val decoder: EntityDecoder[IO, Url] = jsonOf[IO, Url]
