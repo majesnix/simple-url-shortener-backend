@@ -28,17 +28,17 @@ object UrlRoutes {
         case req @ POST -> Root =>
           for {
             url <- req.as[Url]
-            resp <-
+            response <-
               if (valid(url)) {
                 for {
                   short <- IO { generateId(8) }
                   _ <- createShortUrl(short = short, url = url.url)
-                  resp <- Ok(CreateShortUrlResponse(short = short).asJson)
-                } yield resp
+                  response <- Ok(CreateShortUrlResponse(short = short).asJson)
+                } yield response
               } else {
                 BadRequest("Invalid URL")
               }
-          } yield resp
+          } yield response
         case GET -> Root / short =>
           for {
             maybeUrl <- resolveShortUrl(short = short)

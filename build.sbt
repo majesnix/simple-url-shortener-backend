@@ -21,9 +21,11 @@ lazy val root = (project in file("."))
     dockerUsername := Some("codingbros")
   )
 
+addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
+
 val http4sVersion = "1.0.0-M40"
 // Needed for flyway migrations
-lazy val jdbcPostgresVersion = "42.5.4"
+lazy val jdbcPostgresVersion = "42.7.1"
 lazy val circeVersion = "0.14.6"
 
 libraryDependencies ++= Seq(
@@ -36,6 +38,6 @@ libraryDependencies ++= Seq(
   "io.circe" %% "circe-literal" % circeVersion,
   "org.tpolecat" %% "skunk-core" % "0.6.2",
   "org.postgresql" % "postgresql" % jdbcPostgresVersion,
-  "org.flywaydb" % "flyway-core" % "9.16.0",
-  "com.typesafe" % "config" % "1.4.2"
+  "org.flywaydb" % "flyway-core" % "10.6.0",
+  "com.typesafe" % "config" % "1.4.3",
 )
