@@ -38,6 +38,6 @@ libraryDependencies ++= Seq(
   "io.circe" %% "circe-literal" % circeVersion,
   "org.tpolecat" %% "skunk-core" % "0.6.2",
   "org.postgresql" % "postgresql" % jdbcPostgresVersion,
-  "org.flywaydb" % "flyway-core" % "10.6.0",
+  "org.flywaydb" % "flyway-core" % "9.22.3",
   "com.typesafe" % "config" % "1.4.3",
 )
