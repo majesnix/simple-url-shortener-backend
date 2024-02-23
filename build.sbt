@@ -4,14 +4,14 @@ ThisBuild / scalaVersion := "2.13.12"
 
 enablePlugins(JavaServerAppPackaging)
 
-packageName in Docker := "sus-backend"
-version in Docker := "2.0.0"
+Docker / packageName := "sus-backend"
+Docker / version := "2.0.0"
 dockerBuildCommand := {
   if (sys.props("os.arch") != "amd64") {
     // use buildx with platform to build supported amd64 images on other CPU architectures
     // this may require that you have first run 'docker buildx create' to set docker buildx up
     dockerExecCommand.value ++ Seq("buildx", "build", "--platform=linux/amd64", "--load") ++ dockerBuildOptions.value :+ "."
-  } else dockerExecCommand.value ++ Seq("buildx", "build", "--platform=linux/arm64", "--load") ++ dockerBuildOptions.value :+ "."
+  } else dockerExecCommand.value
 }
 
 lazy val root = (project in file("."))
@@ -24,10 +24,11 @@ lazy val root = (project in file("."))
 
 addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
 
-val http4sVersion = "1.0.0-M40"
+lazy val http4sVersion = "1.0.0-M40"
 // Needed for flyway migrations
 lazy val jdbcPostgresVersion = "42.7.2"
 lazy val circeVersion = "0.14.6"
+lazy val flywayVersion = "10.8.1"
 
 libraryDependencies ++= Seq(
   "org.http4s" %% "http4s-ember-client" % http4sVersion,
@@ -39,7 +40,7 @@ libraryDependencies ++= Seq(
   "io.circe" %% "circe-literal" % circeVersion,
   "org.tpolecat" %% "skunk-core" % "0.6.3",
   "org.postgresql" % "postgresql" % jdbcPostgresVersion,
-  "org.flywaydb" % "flyway-core" % "10.8.1",
-  "org.flywaydb" % "flyway-database-postgresql" % "10.8.1",
+  "org.flywaydb" % "flyway-core" % flywayVersion,
+  "org.flywaydb" % "flyway-database-postgresql" % flywayVersion,
   "com.typesafe" % "config" % "1.4.3",
 )
