@@ -18,14 +18,15 @@ lazy val root = (project in file("."))
   .settings(
     name := "url-shortener",
     dockerExposedPorts := Seq(8080),
-    dockerUsername := Some("codingbros")
+    dockerUsername := Some("codingbros"),
+    dockerBaseImage := "openjdk:17"
   )
 
 addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
 
 val http4sVersion = "1.0.0-M40"
 // Needed for flyway migrations
-lazy val jdbcPostgresVersion = "42.7.1"
+lazy val jdbcPostgresVersion = "42.7.2"
 lazy val circeVersion = "0.14.6"
 
 libraryDependencies ++= Seq(
@@ -36,8 +37,9 @@ libraryDependencies ++= Seq(
   "org.typelevel" %% "cats-effect" % "3.5.3",
   "io.circe" %% "circe-generic" % circeVersion,
   "io.circe" %% "circe-literal" % circeVersion,
-  "org.tpolecat" %% "skunk-core" % "0.6.2",
+  "org.tpolecat" %% "skunk-core" % "0.6.3",
   "org.postgresql" % "postgresql" % jdbcPostgresVersion,
-  "org.flywaydb" % "flyway-core" % "9.22.3",
+  "org.flywaydb" % "flyway-core" % "10.8.1",
+  "org.flywaydb" % "flyway-database-postgresql" % "10.8.1",
   "com.typesafe" % "config" % "1.4.3",
 )
