@@ -42,7 +42,7 @@ object NanoId {
       }, alphabet, size).mkString("")
 
     private def generateGeneric(random: Int => List[Byte], alphabet: Vector[Char], size: Int): List[Char] = {
-      val mask = (2 << (Math.log(alphabet.length - 1) / Math.log(2)).floor.round) - 1
+      val mask = (2 << (Math.log(alphabet.length - 1) / Math.log(2)).floor.round.toInt) - 1
       val step = (1.6 * mask * size / alphabet.length).ceil.round.toInt
       val bytes = random(step)
 
