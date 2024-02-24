@@ -6,12 +6,13 @@ enablePlugins(JavaServerAppPackaging)
 
 Docker / packageName := "sus-backend"
 Docker / version := "2.0.0"
+
 dockerBuildCommand := {
   if (sys.props("os.arch") != "amd64") {
     // use buildx with platform to build supported amd64 images on other CPU architectures
     // this may require that you have first run 'docker buildx create' to set docker buildx up
     dockerExecCommand.value ++ Seq("buildx", "build", "--platform=linux/amd64", "--load") ++ dockerBuildOptions.value :+ "."
-  } else dockerExecCommand.value ++ Seq("buildx", "build", "--platform=linux/arm64", "--load") ++ dockerBuildOptions.value :+ "."
+  } else dockerExecCommand.value ++ Seq("buildx", "build") ++ dockerBuildOptions.value :+ "."
 }
 
 lazy val root = (project in file("."))
@@ -19,7 +20,7 @@ lazy val root = (project in file("."))
     name := "url-shortener",
     dockerExposedPorts := Seq(8080),
     dockerUsername := Some("codingbros"),
-    dockerBaseImage := "openjdk:17",
+    dockerBaseImage := "openjdk:17"
   )
 
 addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
