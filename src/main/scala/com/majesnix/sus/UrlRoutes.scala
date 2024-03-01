@@ -15,8 +15,6 @@ import io.circe.syntax._
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.slf4j.Slf4jFactory
 
-import scala.language.postfixOps
-
 object UrlRoutes {
   implicit val decoder: EntityDecoder[IO, Url] = jsonOf[IO, Url]
 

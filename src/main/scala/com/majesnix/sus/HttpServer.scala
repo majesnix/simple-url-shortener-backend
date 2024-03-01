@@ -14,12 +14,12 @@ import scala.concurrent.duration.DurationInt
 object HttpServer {
   implicit val loggerFactory: LoggerFactory[IO] = Slf4jFactory.create[IO]
 
-  private val withCors = CORS.policy
-    .withAllowOriginAll
+  private val withCors = CORS.policy.withAllowOriginAll
     .withAllowMethodsIn(Set(Method.GET, Method.POST))
     .withAllowCredentials(false)
     .withMaxAge(1.day)
-    .apply(UrlRoutes.urlRoutes).unsafeRunSync()
+    .apply(UrlRoutes.urlRoutes)
+    .unsafeRunSync()
   private val withErrorLogging = ErrorHandling.Recover.total(
     ErrorAction.log(
       withCors,
@@ -39,7 +39,8 @@ object HttpServer {
           .default[IO]
           .withHost(ipv4"0.0.0.0")
           .withPort(port"8080")
-          .withHttpApp(withErrorLogging).build
+          .withHttpApp(withErrorLogging)
+          .build
     } yield ()
   }.useForever
 }

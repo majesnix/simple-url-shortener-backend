@@ -1,7 +1,7 @@
 package com.majesnix.sus
 
 import cats.effect._
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.ConfigFactory
 import natchez.Trace.Implicits.noop
 import org.flywaydb.core.Flyway
 import skunk._
@@ -25,7 +25,7 @@ object Database {
         .configure()
         .dataSource(
           s"jdbc:postgresql://${config.getString("host")}:${config
-            .getString("port")}/${config.getString("database")}",
+              .getString("port")}/${config.getString("database")}",
           config.getString("user"),
           config.getString("password")
         )

@@ -20,7 +20,10 @@ lazy val root = (project in file("."))
     name := "url-shortener",
     dockerExposedPorts := Seq(8080),
     dockerUsername := Some("codingbros"),
-    dockerBaseImage := "openjdk:17"
+    dockerBaseImage := "openjdk:17",
+    semanticdbEnabled := true,
+    semanticdbVersion := scalafixSemanticdb.revision,
+    scalacOptions += "-Ywarn-unused:imports"
   )
 
 addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
