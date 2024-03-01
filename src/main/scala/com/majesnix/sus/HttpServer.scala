@@ -20,10 +20,9 @@ object HttpServer {
     .withAllowCredentials(false)
     .withMaxAge(1.day)
     .apply(UrlRoutes.urlRoutes).unsafeRunSync()
-  private val withRateLimit = RateLimit.throttle(withCors).unsafeRunSync()
   private val withErrorLogging = ErrorHandling.Recover.total(
     ErrorAction.log(
-      withRateLimit,
+      withCors,
       messageFailureLogAction = (t, msg) =>
         IO.println(msg) >>
           IO.println(t),
