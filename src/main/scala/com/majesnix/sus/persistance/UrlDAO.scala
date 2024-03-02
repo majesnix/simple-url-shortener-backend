@@ -2,7 +2,7 @@ package com.majesnix.sus.persistance
 
 import cats.effect._
 import com.majesnix.sus.Database.pool
-import com.majesnix.sus.models.{ShortUrl, Url}
+import com.majesnix.sus.models.{ShortUrl, UrlDTO}
 import skunk._
 import skunk.codec.all._
 import skunk.implicits._
@@ -26,12 +26,12 @@ object UrlDAO {
     }
   }
 
-  private def resolveShortUrlCommand: Query[String, Url] =
+  private def resolveShortUrlCommand: Query[String, UrlDTO] =
     sql"SELECT long FROM t_url WHERE short = $varchar"
       .query(text)
-      .to[Url]
+      .to[UrlDTO]
 
-  def resolveShortUrl(short: String): IO[Option[Url]] = {
+  def resolveShortUrl(short: String): IO[Option[UrlDTO]] = {
     pool.use { session =>
       session.use { s =>
         for {

@@ -29,7 +29,7 @@ object NanoId {
   def generateId(size: Int): String =
     generateId(defaultNumberGenerator, defaultAlphabet, size)
 
-  /** Generates a nanoId with the given paramters
+  /** Generates a nanoId with the given parameters
     * @param random
     *   number generator that will be used
     * @param alphabet
