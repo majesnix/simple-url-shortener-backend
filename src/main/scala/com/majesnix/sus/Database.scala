@@ -7,7 +7,7 @@ import org.flywaydb.core.Flyway
 import skunk._
 
 object Database {
-  private val config = ConfigFactory.load().getConfig("database")
+  private lazy val config = ConfigFactory.load().getConfig("database")
 
   val pool: Resource[IO, Resource[IO, Session[IO]]] =
     Session.pooled[IO](
