@@ -26,12 +26,12 @@ object UrlRoutes {
       .of[IO] {
         case req @ POST -> Root =>
           for {
-            url <- req.as[UrlDTO]
+            UrlDTO(url) <- req.as[UrlDTO]
             response <-
               if (valid(url)) {
                 for {
                   short <- IO { generateId(8) }
-                  _ <- createShortUrl(short = short, url = url.url)
+                  _ <- createShortUrl(short = short, url = url)
                   response <- Ok(ShortenResponse(short = short).asJson)
                 } yield response
               } else {
