@@ -35,18 +35,18 @@ lazy val circeVersion = "0.14.6"
 lazy val flywayVersion = "10.8.1"
 
 libraryDependencies ++= Seq(
-  "org.http4s" %% "http4s-ember-client" % http4sVersion,
-  "org.http4s" %% "http4s-ember-server" % http4sVersion,
-  "org.http4s" %% "http4s-circe" % http4sVersion,
-  "org.http4s" %% "http4s-dsl" % http4sVersion,
-  "org.typelevel" %% "cats-effect" % "3.5.3",
-  "io.circe" %% "circe-generic" % circeVersion,
-  "io.circe" %% "circe-literal" % circeVersion,
-  "org.tpolecat" %% "skunk-core" % "0.6.3",
-  "org.postgresql" % "postgresql" % jdbcPostgresVersion,
-  "org.flywaydb" % "flyway-core" % flywayVersion,
-  "org.flywaydb" % "flyway-database-postgresql" % flywayVersion,
-  "com.typesafe" % "config" % "1.4.3",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
-  "ch.qos.logback" % "logback-classic" % "1.4.14" % Runtime
+  "org.http4s"                  %% "http4s-ember-client"        % http4sVersion,
+  "org.http4s"                  %% "http4s-ember-server"        % http4sVersion,
+  "org.http4s"                  %% "http4s-circe"               % http4sVersion,
+  "org.http4s"                  %% "http4s-dsl"                 % http4sVersion,
+  "org.typelevel"               %% "cats-effect"                % "3.5.3",
+  "io.circe"                    %% "circe-generic"              % circeVersion,
+  "io.circe"                    %% "circe-literal"              % circeVersion,
+  "org.tpolecat"                %% "skunk-core"                 % "0.6.3",
+  "org.postgresql"              % "postgresql"                  % jdbcPostgresVersion,
+  "org.flywaydb"                % "flyway-core"                 % flywayVersion,
+  "org.flywaydb"                % "flyway-database-postgresql"  % flywayVersion,
+  "com.typesafe"                % "config"                      % "1.4.3",
+  "com.typesafe.scala-logging"  %% "scala-logging"              % "3.9.5",
+  "ch.qos.logback"              % "logback-classic"             % "1.4.14" % Runtime
 )

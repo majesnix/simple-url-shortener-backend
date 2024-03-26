@@ -20,6 +20,7 @@ object HttpServer {
     .withMaxAge(1.day)
     .apply(UrlRoutes.urlRoutes)
     .unsafeRunSync()
+
   private val withErrorLogging = ErrorHandling.Recover.total(
     ErrorAction.log(
       withCors,
