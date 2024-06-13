@@ -30,9 +30,9 @@ addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
 
 lazy val http4sVersion = "1.0.0-M40"
 // Needed for flyway migrations
-lazy val jdbcPostgresVersion = "42.7.2"
-lazy val circeVersion = "0.14.6"
-lazy val flywayVersion = "10.8.1"
+lazy val jdbcPostgresVersion = "42.7.3"
+lazy val circeVersion = "0.14.7"
+lazy val flywayVersion = "10.14.0"
 
 libraryDependencies ++= Seq(
   "org.http4s"                  %% "http4s-ember-client"        % http4sVersion,
@@ -48,5 +48,5 @@ libraryDependencies ++= Seq(
   "org.flywaydb"                % "flyway-database-postgresql"  % flywayVersion,
   "com.typesafe"                % "config"                      % "1.4.3",
   "com.typesafe.scala-logging"  %% "scala-logging"              % "3.9.5",
-  "ch.qos.logback"              % "logback-classic"             % "1.4.14" % Runtime
+  "ch.qos.logback"              % "logback-classic"             % "1.5.6" % Runtime
 )
