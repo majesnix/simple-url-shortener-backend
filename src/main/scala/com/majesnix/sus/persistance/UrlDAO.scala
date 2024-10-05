@@ -42,4 +42,19 @@ object UrlDAO {
       }
     }
   }
+
+  private def deleteShortUrlCommand(): Command[String] =
+    sql"DELETE FROM t_url WHERE short = $varchar".command
+
+  def deleteShortUrl(short: String): IO[Unit] = {
+    pool.use { session =>
+      session.use { s =>
+        for {
+          _ <- s.prepare(deleteShortUrlCommand()).flatMap { ps =>
+            ps.execute(args = short)
+          }
+        } yield ()
+      }
+    }
+  }
 }

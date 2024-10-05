@@ -2,6 +2,8 @@ name: CI
 on:
   pull_request:
   push:
+    branches:
+      - 'main'
   workflow_dispatch:
 
 jobs:
@@ -27,6 +29,6 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 22
       - name: Build and publish
         run: sbt docker:publish

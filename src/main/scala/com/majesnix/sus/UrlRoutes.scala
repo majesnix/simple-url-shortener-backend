@@ -2,10 +2,11 @@ package com.majesnix.sus
 
 import cats.data.Kleisli
 import cats.effect.IO
+import cats.implicits.{catsSyntaxApplicativeId, catsSyntaxOptionId}
 import com.majesnix.sus.NanoId.generateId
 import com.majesnix.sus.models.UrlDTO.valid
 import com.majesnix.sus.models.{ShortenResponse, UrlDTO}
-import com.majesnix.sus.persistance.UrlDAO.{createShortUrl, resolveShortUrl}
+import com.majesnix.sus.persistance.UrlDAO.{createShortUrl, deleteShortUrl, resolveShortUrl}
 import org.http4s._
 import org.http4s.implicits._
 import org.http4s.circe._
@@ -14,6 +15,8 @@ import io.circe.generic.auto._
 import io.circe.syntax._
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.slf4j.Slf4jFactory
+
+case class User(id: Long, name: String)
 
 object UrlRoutes {
   implicit val decoder: EntityDecoder[IO, UrlDTO] =
@@ -48,4 +51,12 @@ object UrlRoutes {
           } yield response
       }
       .orNotFound
+
+  private val authedRoutes: AuthedRoutes[User, IO] =
+    AuthedRoutes.of { case DELETE -> Root / short as user =>
+      for {
+        _ <- deleteShortUrl(short = short)
+        response <- Ok("Deleted")
+      } yield response
+    }
 }
