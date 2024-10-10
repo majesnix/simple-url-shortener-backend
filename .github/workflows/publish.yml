@@ -27,6 +27,6 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 22
       - name: Build and publish
         run: sbt docker:publish
