@@ -7,15 +7,9 @@ ThisBuild / scalaVersion := "2.13.15"
 enablePlugins(JavaServerAppPackaging)
 
 Docker / packageName := "sus-backend"
-Docker / version := "2.0.0"
-
-dockerBuildCommand := {
-  if (sys.props("os.arch") != "amd64") {
-    // use buildx with platform to build supported amd64 images on other CPU architectures
-    // this may require that you have first run 'docker buildx create' to set docker buildx up
-    dockerExecCommand.value ++ Seq("buildx", "build", "--platform=linux/amd64", "--load") ++ dockerBuildOptions.value :+ "."
-  } else dockerExecCommand.value ++ Seq("buildx", "build", "--platform=linux/arm64", "--load") ++ dockerBuildOptions.value :+ "."
-}
+Docker / version := "2.0.1"
+dockerUpdateLatest := true
+dockerBuildxPlatforms := Seq("linux/arm64/v8", "linux/amd64")
 
 lazy val root = (project in file("."))
   .settings(
@@ -74,5 +68,5 @@ deployContainers := {
 lazy val stopContainers = taskKey[Unit]("Stop containers")
 stopContainers := Process(s"docker compose down").!
 
-lazy val runItTest = taskKey[Unit]("Deploy containers, run it tests and stop afterwards")
+lazy val runItTest = taskKey[Unit]("Build image, deploy containers, run it tests and stop afterwards")
 runItTest := (stopContainers dependsOn it/Test/test dependsOn deployContainers dependsOn Docker/publishLocal).value
