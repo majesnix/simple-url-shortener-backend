@@ -10,7 +10,7 @@ class Tests extends AnyFlatSpec {
     )
 
     val createdShortUrl = quickRequest
-      .post(uri"http://127.0.0.1:8080")
+      .post(uri"http://localhost:8080")
       .header("Content-Type", "application/json")
       .body(ujson.write(url))
       .send()
@@ -20,7 +20,7 @@ class Tests extends AnyFlatSpec {
     val returnedShort = ujson.read(createdShortUrl.body)
 
     val resolvedShortUrl = quickRequest
-      .get(uri"http://127.0.0.1:8080/${returnedShort("short").str}")
+      .get(uri"http://localhost:8080/${returnedShort("short").str}")
       .send()
 
     assert(resolvedShortUrl.code == StatusCode.Ok)
@@ -32,7 +32,7 @@ class Tests extends AnyFlatSpec {
 
   it should "return 404 if url does not exist" in {
     val notFoundLong = quickRequest
-      .get(uri"http://127.0.0.1:8080/abc")
+      .get(uri"http://localhost:8080/abc")
       .send()
 
     assert(notFoundLong.code == StatusCode.NotFound)
