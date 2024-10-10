@@ -32,9 +32,9 @@ addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
 
 lazy val http4sVersion = "1.0.0-M41"
 // Needed for flyway migrations
-lazy val jdbcPostgresVersion = "42.7.3"
-lazy val circeVersion = "0.14.9"
-lazy val flywayVersion = "10.15.2"
+lazy val jdbcPostgresVersion = "42.7.4"
+lazy val circeVersion = "0.14.10"
+lazy val flywayVersion = "10.19.0"
 
 libraryDependencies ++= Seq(
   "org.http4s"                  %% "http4s-ember-client"        % http4sVersion,
@@ -44,7 +44,7 @@ libraryDependencies ++= Seq(
   "org.typelevel"               %% "cats-effect"                % "3.5.4",
   "io.circe"                    %% "circe-generic"              % circeVersion,
   "io.circe"                    %% "circe-literal"              % circeVersion,
-  "org.tpolecat"                %% "skunk-core"                 % "0.6.3",
+  "org.tpolecat"                %% "skunk-core"                 % "0.6.4",
   "org.postgresql"              % "postgresql"                  % jdbcPostgresVersion,
   "org.flywaydb"                % "flyway-core"                 % flywayVersion,
   "org.flywaydb"                % "flyway-database-postgresql"  % flywayVersion,
@@ -60,12 +60,19 @@ lazy val it = (project in file("it"))
     publish / skip := true,
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "3.2.19",
-      "org.scala-lang" %% "toolkit" % "0.4.0"
+      "org.scala-lang" %% "toolkit" % "0.5.0"
     )
   )
 
 lazy val deployContainers = taskKey[Unit]("Deploy containers")
-deployContainers := Process(s"docker compose up -d").!
+deployContainers := {
+  Process(s"docker compose up -d").!
+  println(s"Waiting for containers to be up and running (5 sec)")
+  Thread.sleep(5000)
+}
 
 lazy val stopContainers = taskKey[Unit]("Stop containers")
 stopContainers := Process(s"docker compose down").!
+
+lazy val runItTest = taskKey[Unit]("Deploy containers, run it tests and stop afterwards")
+runItTest := (stopContainers dependsOn it/Test/test dependsOn deployContainers dependsOn Docker/publishLocal).value

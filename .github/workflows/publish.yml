@@ -29,4 +29,6 @@ jobs:
           distribution: temurin
           java-version: 22
       - name: Build and publish
-        run: sbt docker:publish
+        run: |
+          sbt runItTest
+          sbt docker:publish
