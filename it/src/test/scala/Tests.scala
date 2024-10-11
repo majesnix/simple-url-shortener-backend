@@ -37,4 +37,18 @@ class Tests extends AnyFlatSpec {
 
     assert(notFoundLong.code == StatusCode.NotFound)
   }
+
+  it should "deny shorten own server url" in {
+    val url = ujson.Obj(
+      "url" -> "https://localhost:8080"
+    )
+
+    val createdShortUrl = quickRequest
+      .post(uri"http://localhost:8080")
+      .header("Content-Type", "application/json")
+      .body(ujson.write(url))
+      .send()
+
+    assert(createdShortUrl.code == StatusCode.BadRequest)
+  }
 }
