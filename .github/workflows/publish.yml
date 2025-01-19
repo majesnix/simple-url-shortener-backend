@@ -29,6 +29,11 @@ jobs:
           distribution: temurin
           java-version: 22
 
+      - name: Setup sbt
+        uses: sbt/setup-sbt@v1.1.0
+        with:
+          sbt-runner-version: 1.10.2
+
       - name: Integration Tests
         run: |
           sbt runItTest
