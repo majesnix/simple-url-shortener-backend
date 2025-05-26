@@ -45,7 +45,7 @@ libraryDependencies ++= Seq(
   "com.typesafe"                % "config"                      % "1.4.3",
   "com.typesafe.scala-logging"  %% "scala-logging"              % "3.9.5",
   "ch.qos.logback"              % "logback-classic"             % "1.5.18" % Runtime,
-  "org.typelevel"               %% "log4cats-slf4j"             % "2.7.0",  // Direct Slf4j Support - Recommended
+  "org.typelevel"               %% "log4cats-slf4j"             % "2.7.1",  // Direct Slf4j Support - Recommended
 )
 
 lazy val it = (project in file("it"))
