@@ -30,7 +30,7 @@ object UrlRoutes {
             response <-
               if (valid(url)) {
                 for {
-                  short <- IO { generateId(8) }
+                  short <- generateId(8)
                   _ <- createShortUrl(short = short, url = url)
                   response <- Ok(ShortenResponse(short = short).asJson)
                 } yield response

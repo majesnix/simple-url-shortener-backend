@@ -1,5 +1,7 @@
 package com.majesnix.sus
 
+import cats.effect.IO
+
 import java.security.SecureRandom
 import scala.util.Random
 
@@ -14,19 +16,21 @@ object NanoId {
   private lazy val defaultSize = 21
 
   /** Generates a nanoId with default size (21)
-    * @return
-    *   nanoId
-    */
-  def generateId: String =
+   *
+   * @return
+   * nanoId
+   */
+  def generateId: IO[String] =
     generateId(defaultNumberGenerator, defaultAlphabet, defaultSize)
 
   /** Generates a nanoId with of the given size
-    * @param size
-    *   length of generated nanoId
-    * @return
-    *   nanoId
-    */
-  def generateId(size: Int): String =
+   *
+   * @param size
+   * length of generated nanoId
+   * @return
+   * nanoId
+   */
+  def generateId(size: Int): IO[String] =
     generateId(defaultNumberGenerator, defaultAlphabet, size)
 
   /** Generates a nanoId with the given parameters
@@ -39,8 +43,8 @@ object NanoId {
     * @return
     *   nanoId
     */
-  def generateId(random: Random, alphabet: Vector[Char], size: Int): String =
-    generateGeneric(
+  def generateId(random: Random, alphabet: Vector[Char], size: Int): IO[String] = for {
+    id <- generateGeneric(
       size => {
         val bytes: Array[Byte] = new Array[Byte](size)
         random.nextBytes(bytes)
@@ -48,13 +52,14 @@ object NanoId {
       },
       alphabet,
       size
-    ).mkString("")
+    )
+  } yield id.mkString("")
 
   private def generateGeneric(
       random: Int => List[Byte],
       alphabet: Vector[Char],
       size: Int
-  ): List[Char] = {
+  ) = IO({
     val mask =
       (2 << (Math.log(alphabet.length - 1) / Math.log(2)).floor.round.toInt) - 1
     val step = (1.6 * mask * size / alphabet.length).ceil.round.toInt
@@ -64,5 +69,5 @@ object NanoId {
       .map(_ & mask)
       .flatMap(a => alphabet.lift(a).toList)
       .take(size)
-  }
+  })
 }
