@@ -42,7 +42,7 @@ libraryDependencies ++= Seq(
   "org.postgresql"              % "postgresql"                  % jdbcPostgresVersion,
   "org.flywaydb"                % "flyway-core"                 % flywayVersion,
   "org.flywaydb"                % "flyway-database-postgresql"  % flywayVersion,
-  "com.typesafe"                % "config"                      % "1.4.3",
+  "com.typesafe"                % "config"                      % "1.4.4",
   "com.typesafe.scala-logging"  %% "scala-logging"              % "3.9.5",
   "ch.qos.logback"              % "logback-classic"             % "1.5.18" % Runtime,
   "org.typelevel"               %% "log4cats-slf4j"             % "2.7.1",  // Direct Slf4j Support - Recommended
