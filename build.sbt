@@ -24,7 +24,7 @@ lazy val root = (project in file("."))
 
 addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
 
-lazy val http4sVersion = "1.0.0-M44"
+lazy val http4sVersion = "1.0.0-M45"
 // Needed for flyway migrations
 lazy val jdbcPostgresVersion = "42.7.8"
 lazy val circeVersion = "0.14.14"
