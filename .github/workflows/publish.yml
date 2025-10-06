@@ -31,7 +31,7 @@ jobs:
           java-version: 22
 
       - name: Setup sbt
-        uses: sbt/setup-sbt@v1.1.13
+        uses: sbt/setup-sbt@v1.1.14
         with:
           sbt-runner-version: 1.10.2
 
