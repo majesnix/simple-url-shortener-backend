@@ -27,7 +27,7 @@ addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
 lazy val http4sVersion = "1.0.0-M46"
 // Needed for flyway migrations
 lazy val jdbcPostgresVersion = "42.7.8"
-lazy val circeVersion = "0.14.14"
+lazy val circeVersion = "0.14.15"
 lazy val flywayVersion = "11.15.0"
 
 libraryDependencies ++= Seq(
