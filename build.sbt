@@ -54,7 +54,7 @@ lazy val it = (project in file("it"))
     publish / skip := true,
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "3.2.19",
-      "org.scala-lang" %% "toolkit" % "0.6.0"
+      "org.scala-lang" %% "toolkit" % "0.7.0"
     )
   )
 
