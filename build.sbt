@@ -2,7 +2,7 @@ import scala.sys.process.Process
 
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
-ThisBuild / scalaVersion := "2.13.17"
+ThisBuild / scalaVersion := "2.13.18"
 
 enablePlugins(JavaServerAppPackaging)
 
