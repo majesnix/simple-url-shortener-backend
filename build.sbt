@@ -38,7 +38,7 @@ libraryDependencies ++= Seq(
   "org.typelevel"               %% "cats-effect"                % "3.7-4972921",
   "io.circe"                    %% "circe-generic"              % circeVersion,
   "io.circe"                    %% "circe-literal"              % circeVersion,
-  "org.tpolecat"                %% "skunk-core"                 % "0.6.4",
+  "org.tpolecat"                %% "skunk-core"                 % "0.6.5",
   "org.postgresql"              % "postgresql"                  % jdbcPostgresVersion,
   "org.flywaydb"                % "flyway-core"                 % flywayVersion,
   "org.flywaydb"                % "flyway-database-postgresql"  % flywayVersion,
