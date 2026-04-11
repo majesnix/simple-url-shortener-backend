@@ -1,2 +1,2 @@
-sbt 1.10.2
-java openjdk-22
+sbt 1.12.9
+java openjdk-25
