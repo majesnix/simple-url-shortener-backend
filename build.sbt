@@ -28,7 +28,7 @@ lazy val http4sVersion = "1.0.0-M46"
 // Needed for flyway migrations
 lazy val jdbcPostgresVersion = "42.7.10"
 lazy val circeVersion = "0.14.15"
-lazy val flywayVersion = "11.15.0"
+lazy val flywayVersion = "11.20.3"
 
 libraryDependencies ++= Seq(
   "org.http4s"                  %% "http4s-ember-client"        % http4sVersion,
