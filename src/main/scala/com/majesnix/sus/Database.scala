@@ -19,19 +19,16 @@ object Database {
       max = config.getInt("thread-pool-size")
     )
 
-  def migrate(): IO[Unit] = for {
-    _ <- IO {
-      Flyway
-        .configure()
-        .dataSource(
-          s"jdbc:postgresql://${config.getString("host")}:${config
-              .getString("port")}/${config.getString("database")}",
-          config.getString("user"),
-          config.getString("password")
-        )
-        .load()
-        .migrate()
-    }
-  } yield ()
-
+  def migrate(): IO[Unit] = IO.blocking {
+    Flyway
+      .configure()
+      .dataSource(
+        s"jdbc:postgresql://${config.getString("host")}:${config.getString("port")}/${config.getString("database")}",
+        config.getString("user"),
+        config.getString("password")
+      )
+      .load()
+      .migrate()
+    ()
+  }
 }

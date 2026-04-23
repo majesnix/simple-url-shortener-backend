@@ -1,11 +1,14 @@
 <configuration>
-    <!-- Logging configuration -->
+    <!-- INFO and WARN to STDOUT; ERROR (and above) to STDERR. Nothing dropped. -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <Target>System.out</Target>
-        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
             <level>INFO</level>
-            <onMatch>ACCEPT</onMatch>
-            <onMismatch>DENY</onMismatch>
+        </filter>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>DENY</onMatch>
+            <onMismatch>ACCEPT</onMismatch>
         </filter>
         <encoder>
             <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%level] %msg%n</pattern>
@@ -13,10 +16,8 @@
     </appender>
     <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
         <Target>System.err</Target>
-        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
             <level>ERROR</level>
-            <onMatch>ACCEPT</onMatch>
-            <onMismatch>DENY</onMismatch>
         </filter>
         <encoder>
             <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%level] [%thread] %logger{10} [%file:%line] %msg%n</pattern>

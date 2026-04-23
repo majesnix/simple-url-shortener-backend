@@ -4,9 +4,11 @@ services:
     ports:
       - "5432:5432"
     environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
       - POSTGRES_PASSWORD=postgres
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
       interval: 10s
       retries: 5
       start_period: 30s
@@ -21,3 +23,9 @@ services:
       db:
         condition: service_healthy
         restart: true
+    healthcheck:
+      test: [ "CMD-SHELL", "bash -c '</dev/tcp/localhost/8080'" ]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 5s

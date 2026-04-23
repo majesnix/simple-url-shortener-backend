@@ -1,51 +1,55 @@
 package com.majesnix.sus
 
-import cats.data.Kleisli
 import cats.effect.IO
 import com.majesnix.sus.NanoId.generateId
 import com.majesnix.sus.models.UrlDTO.valid
 import com.majesnix.sus.models.{ShortenResponse, UrlDTO}
-import com.majesnix.sus.persistance.UrlDAO.{createShortUrl, resolveShortUrl}
-import org.http4s._
-import org.http4s.implicits._
-import org.http4s.circe._
-import org.http4s.dsl.io._
+import com.majesnix.sus.persistance.UrlDAO
 import io.circe.generic.auto._
 import io.circe.syntax._
-import org.typelevel.log4cats.LoggerFactory
-import org.typelevel.log4cats.slf4j.Slf4jFactory
+import org.http4s._
+import org.http4s.circe._
+import org.http4s.dsl.io._
 
 object UrlRoutes {
-  implicit val decoder: EntityDecoder[IO, UrlDTO] =
-    jsonOf[IO, UrlDTO]
+  private val ShortLength = 8
+  private val MaxInsertAttempts = 5
 
-  implicit val loggerFactory: LoggerFactory[IO] = Slf4jFactory.create[IO]
+  implicit val decoder: EntityDecoder[IO, UrlDTO] = jsonOf[IO, UrlDTO]
 
-  val urlRoutes: Kleisli[IO, Request[IO], Response[IO]] =
+  private def createWithRetry(dao: UrlDAO, url: String, attemptsLeft: Int): IO[Option[String]] =
+    if (attemptsLeft <= 0) IO.pure(None)
+    else
+      for {
+        short    <- generateId(ShortLength)
+        inserted <- dao.insertShortUrl(short, url)
+        result   <- if (inserted) IO.pure(Some(short))
+                    else createWithRetry(dao, url, attemptsLeft - 1)
+      } yield result
+
+  def routes(dao: UrlDAO): HttpApp[IO] =
     HttpRoutes
       .of[IO] {
+        case GET -> Root / "health" =>
+          Ok("OK")
+
         case req @ POST -> Root =>
           for {
             UrlDTO(url) <- req.as[UrlDTO]
             response <-
-              if (valid(url)) {
-                for {
-                  short <- generateId(8)
-                  _ <- createShortUrl(short = short, url = url)
-                  response <- Ok(ShortenResponse(short = short).asJson)
-                } yield response
-              } else {
-                BadRequest("Invalid URL")
-              }
+              if (!valid(url)) BadRequest("Invalid URL")
+              else
+                createWithRetry(dao, url, MaxInsertAttempts).flatMap {
+                  case Some(short) => Ok(ShortenResponse(short = short).asJson)
+                  case None        => InternalServerError("Could not generate a unique short URL")
+                }
           } yield response
+
         case GET -> Root / short =>
-          for {
-            maybeUrl <- resolveShortUrl(short = short)
-            response <- maybeUrl match {
-              case Some(url) => Ok(url.asJson)
-              case _         => NotFound()
-            }
-          } yield response
+          dao.resolveShortUrl(short).flatMap {
+            case Some(url) => Ok(url.asJson)
+            case None      => NotFound()
+          }
       }
       .orNotFound
 }

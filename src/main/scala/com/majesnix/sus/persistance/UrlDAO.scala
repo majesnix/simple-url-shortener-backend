@@ -1,45 +1,33 @@
 package com.majesnix.sus.persistance
 
 import cats.effect._
-import com.majesnix.sus.Database.pool
 import com.majesnix.sus.models.{ShortUrl, UrlDTO}
 import skunk._
 import skunk.codec.all._
 import skunk.implicits._
 
-object UrlDAO {
+class UrlDAO(sessions: Resource[IO, Session[IO]]) {
 
   private val shortUrl = (varchar *: text).values.to[ShortUrl]
 
-  private def insertShortUrlCommand(): Command[ShortUrl] =
+  private val insertShortUrlCommand: Command[ShortUrl] =
     sql"INSERT INTO t_url (short, long) VALUES $shortUrl".command
 
-  def createShortUrl(short: String, url: String): IO[Unit] = {
-    pool.use { session =>
-      session.use { s =>
-        for {
-          _ <- s.execute(insertShortUrlCommand())(
-            args = ShortUrl(short = short, url = url)
-          )
-        } yield ()
-      }
-    }
-  }
-
-  private def resolveShortUrlCommand: Query[String, UrlDTO] =
+  private val resolveShortUrlCommand: Query[String, UrlDTO] =
     sql"SELECT long FROM t_url WHERE short = $varchar"
       .query(text)
       .to[UrlDTO]
 
-  def resolveShortUrl(short: String): IO[Option[UrlDTO]] = {
-    pool.use { session =>
-      session.use { s =>
-        for {
-          url <- s.prepare(resolveShortUrlCommand).flatMap { ps =>
-            ps.option(args = short)
-          }
-        } yield url
-      }
+  /** Inserts a short→url mapping. Returns `false` if the short collided with an
+    * existing row (UNIQUE violation), `true` on success.
+    */
+  def insertShortUrl(short: String, url: String): IO[Boolean] =
+    sessions.use { s =>
+      s.execute(insertShortUrlCommand)(ShortUrl(short = short, url = url)).as(true)
+    }.recover { case SqlState.UniqueViolation(_) => false }
+
+  def resolveShortUrl(short: String): IO[Option[UrlDTO]] =
+    sessions.use { s =>
+      s.prepare(resolveShortUrlCommand).flatMap(_.option(short))
     }
-  }
 }
