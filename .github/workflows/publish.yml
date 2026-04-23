@@ -35,6 +35,10 @@ jobs:
         with:
           sbt-runner-version: 1.12.9
 
+      - name: Unit Tests
+        run: |
+          sbt test
+
       - name: Integration Tests
         run: |
           sbt runItTest

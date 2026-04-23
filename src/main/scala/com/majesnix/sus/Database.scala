@@ -2,7 +2,10 @@ package com.majesnix.sus
 
 import cats.effect._
 import com.typesafe.config.ConfigFactory
-import natchez.Trace.Implicits.noop
+import org.typelevel.otel4s.metrics.Meter
+import org.typelevel.otel4s.trace.Tracer
+import Tracer.Implicits.{noop => tracerNoop}
+import Meter.Implicits.{noop => meterNoop}
 import org.flywaydb.core.Flyway
 import skunk._
 

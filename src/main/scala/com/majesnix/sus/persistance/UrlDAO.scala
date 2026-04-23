@@ -6,7 +6,12 @@ import skunk._
 import skunk.codec.all._
 import skunk.implicits._
 
-class UrlDAO(sessions: Resource[IO, Session[IO]]) {
+trait UrlRepository {
+  def insertShortUrl(short: String, url: String): IO[Boolean]
+  def resolveShortUrl(short: String): IO[Option[UrlDTO]]
+}
+
+class UrlDAO(sessions: Resource[IO, Session[IO]]) extends UrlRepository {
 
   private val shortUrl = (varchar *: text).values.to[ShortUrl]
 
@@ -18,9 +23,6 @@ class UrlDAO(sessions: Resource[IO, Session[IO]]) {
       .query(text)
       .to[UrlDTO]
 
-  /** Inserts a short→url mapping. Returns `false` if the short collided with an
-    * existing row (UNIQUE violation), `true` on success.
-    */
   def insertShortUrl(short: String, url: String): IO[Boolean] =
     sessions.use { s =>
       s.execute(insertShortUrlCommand)(ShortUrl(short = short, url = url)).as(true)

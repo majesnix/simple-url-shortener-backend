@@ -51,4 +51,48 @@ class Tests extends AnyFlatSpec {
 
     assert(createdShortUrl.code == StatusCode.BadRequest)
   }
+
+  it should "deny disallowed URL schemes" in {
+    val url = ujson.Obj(
+      "url" -> "javascript:alert(1)"
+    )
+
+    val response = quickRequest
+      .post(uri"http://localhost:8080")
+      .header("Content-Type", "application/json")
+      .body(ujson.write(url))
+      .send()
+
+    assert(response.code == StatusCode.BadRequest)
+  }
+
+  it should "return 4xx for a missing url field" in {
+    val response = quickRequest
+      .post(uri"http://localhost:8080")
+      .header("Content-Type", "application/json")
+      .body("""{}""")
+      .send()
+
+    assert(response.code.isClientError)
+  }
+
+  it should "return 4xx for a malformed JSON body" in {
+    val response = quickRequest
+      .post(uri"http://localhost:8080")
+      .header("Content-Type", "application/json")
+      .body("not json")
+      .send()
+
+    assert(response.code.isClientError)
+  }
+
+  it should "return 4xx for an empty body" in {
+    val response = quickRequest
+      .post(uri"http://localhost:8080")
+      .header("Content-Type", "application/json")
+      .body("")
+      .send()
+
+    assert(response.code.isClientError)
+  }
 }
