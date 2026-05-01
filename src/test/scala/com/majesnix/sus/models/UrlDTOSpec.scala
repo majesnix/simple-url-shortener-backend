@@ -5,10 +5,13 @@ import org.scalatest.matchers.should.Matchers
 
 class UrlDTOSpec extends AnyFlatSpec with Matchers {
 
-  "valid" should "accept http, https and ftp URLs" in {
+  "valid" should "accept http and https URLs" in {
     UrlDTO.valid("http://example.com") shouldBe true
     UrlDTO.valid("https://example.com/path?q=1") shouldBe true
-    UrlDTO.valid("ftp://files.example.com/readme") shouldBe true
+  }
+
+  it should "reject ftp URLs" in {
+    UrlDTO.valid("ftp://files.example.com/readme") shouldBe false
   }
 
   it should "reject URLs without a host" in {
@@ -28,14 +31,33 @@ class UrlDTOSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "reject URLs pointing at our own server host (case-insensitive)" in {
-    // default server.url in application.conf is "localhost"
     UrlDTO.valid("https://localhost:8080/abc") shouldBe false
     UrlDTO.valid("http://LOCALHOST") shouldBe false
   }
 
   it should "not reject URLs that merely contain the server host as a substring" in {
-    // previous `contains` check rejected these; parsed-host check must not
     UrlDTO.valid("https://example.com/?ref=localhost") shouldBe true
     UrlDTO.valid("https://mylocalhostmirror.com") shouldBe true
+  }
+
+  it should "reject loopback and private IP addresses" in {
+    UrlDTO.valid("http://127.0.0.1") shouldBe false
+    UrlDTO.valid("http://127.0.0.1:8080/path") shouldBe false
+    UrlDTO.valid("http://10.0.0.1") shouldBe false
+    UrlDTO.valid("http://192.168.1.1") shouldBe false
+    UrlDTO.valid("http://169.254.169.254") shouldBe false  // AWS metadata
+    UrlDTO.valid("http://[::1]/") shouldBe false
+  }
+
+  it should "reject URLs exceeding 2048 characters" in {
+    val longUrl = "https://example.com/" + "a" * 2030
+    longUrl.length should be > 2048
+    UrlDTO.valid(longUrl) shouldBe false
+  }
+
+  it should "accept URLs up to 2048 characters" in {
+    val okUrl = "https://example.com/" + "a" * (2048 - "https://example.com/".length)
+    okUrl.length shouldBe 2048
+    UrlDTO.valid(okUrl) shouldBe true
   }
 }

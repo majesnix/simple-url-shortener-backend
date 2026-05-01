@@ -2,10 +2,12 @@ services:
   db:
     image: postgres
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_DB=postgres
+      # SECURITY: override with a strong value in production (e.g. via .env or Docker secrets).
+      # The default is used for local development only.
       - POSTGRES_PASSWORD=postgres
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
