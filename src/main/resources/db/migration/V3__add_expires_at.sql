@@ -1,0 +1,2 @@
+ALTER TABLE t_url
+    ADD COLUMN expires_at TIMESTAMPTZ NULL;

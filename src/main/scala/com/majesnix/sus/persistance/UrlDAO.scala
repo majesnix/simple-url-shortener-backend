@@ -1,35 +1,51 @@
 package com.majesnix.sus.persistance
 
 import cats.effect._
-import com.majesnix.sus.models.{ShortUrl, UrlDTO}
+import com.majesnix.sus.models.UrlDTO
 import skunk._
 import skunk.codec.all._
+import skunk.data.Completion
 import skunk.implicits._
 
+import java.time.OffsetDateTime
+
 trait UrlRepository {
-  def insertShortUrl(short: String, url: String): IO[Boolean]
+  def insertShortUrl(short: String, url: String, expiresAt: Option[OffsetDateTime]): IO[Boolean]
   def resolveShortUrl(short: String): IO[Option[UrlDTO]]
+  def deleteExpiredUrls(): IO[Int]
 }
 
 class UrlDAO(sessions: Resource[IO, Session[IO]]) extends UrlRepository {
 
-  private val shortUrl = (varchar *: text).values.to[ShortUrl]
+  private case class UrlRecord(short: String, url: String, expiresAt: Option[OffsetDateTime])
+  private val urlRecord = (varchar *: text *: timestamptz.opt).values.to[UrlRecord]
 
-  private val insertShortUrlCommand: Command[ShortUrl] =
-    sql"INSERT INTO t_url (short, long) VALUES $shortUrl".command
+  private val insertShortUrlCommand: Command[UrlRecord] =
+    sql"INSERT INTO t_url (short, long, expires_at) VALUES $urlRecord".command
 
-  private val resolveShortUrlCommand: Query[String, UrlDTO] =
-    sql"SELECT long FROM t_url WHERE short = $varchar"
+  private val resolveShortUrlQuery: Query[String, UrlDTO] =
+    sql"SELECT long FROM t_url WHERE short = $varchar AND (expires_at IS NULL OR expires_at > NOW())"
       .query(text)
       .to[UrlDTO]
 
-  def insertShortUrl(short: String, url: String): IO[Boolean] =
+  private val deleteExpiredCommand: Command[Void] =
+    sql"DELETE FROM t_url WHERE expires_at IS NOT NULL AND expires_at <= NOW()".command
+
+  def insertShortUrl(short: String, url: String, expiresAt: Option[OffsetDateTime]): IO[Boolean] =
     sessions.use { s =>
-      s.execute(insertShortUrlCommand)(ShortUrl(short = short, url = url)).as(true)
+      s.execute(insertShortUrlCommand)(UrlRecord(short, url, expiresAt)).as(true)
     }.recover { case SqlState.UniqueViolation(_) => false }
 
   def resolveShortUrl(short: String): IO[Option[UrlDTO]] =
     sessions.use { s =>
-      s.prepare(resolveShortUrlCommand).flatMap(_.option(short))
+      s.prepare(resolveShortUrlQuery).flatMap(_.option(short))
+    }
+
+  def deleteExpiredUrls(): IO[Int] =
+    sessions.use { s =>
+      s.execute(deleteExpiredCommand).map {
+        case Completion.Delete(n) => n
+        case _                   => 0
+      }
     }
 }

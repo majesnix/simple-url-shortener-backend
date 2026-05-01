@@ -3,12 +3,32 @@ package com.majesnix.sus.models
 import com.typesafe.config.ConfigFactory
 
 import java.net.{InetAddress, URI}
+import java.time.{OffsetDateTime, ZoneOffset}
 import scala.util.Try
 import scala.util.matching.Regex
 
 case class UrlDTO(url: String)
 case class ShortenResponse(short: String)
-case class ShortUrl(short: String, url: String)
+case class CreateUrlRequest(url: String, expiry: Option[String] = None)
+
+object CreateUrlRequest {
+  private val AllowedExpiry = Set("1d", "1w", "1m", "1y", "unlimited")
+
+  def validExpiry(expiry: Option[String]): Boolean =
+    expiry.forall(AllowedExpiry.contains)
+
+  def toExpiresAt(expiry: Option[String]): Option[OffsetDateTime] = {
+    val now = OffsetDateTime.now(ZoneOffset.UTC)
+    expiry.flatMap {
+      case "1d"        => Some(now.plusDays(1))
+      case "1w"        => Some(now.plusWeeks(1))
+      case "1m"        => Some(now.plusMonths(1))
+      case "1y"        => Some(now.plusYears(1))
+      case "unlimited" => None
+      case _           => None
+    }
+  }
+}
 
 object UrlDTO {
   private lazy val serverHost = ConfigFactory.load().getConfig("server").getString("url")

@@ -34,13 +34,15 @@ object HttpServer {
       .withMaxAge(1.day)
       .apply(UrlRoutes.routes(dao))
       .flatMap { corsApp =>
-        EmberServerBuilder
-          .default[IO]
-          .withHost(ipv4"0.0.0.0")
-          .withPort(port"8080")
-          .withHttpApp(withErrorLogging(corsApp))
-          .build
-          .useForever
+        Janitor.run(dao).background.use { _ =>
+          EmberServerBuilder
+            .default[IO]
+            .withHost(ipv4"0.0.0.0")
+            .withPort(port"8080")
+            .withHttpApp(withErrorLogging(corsApp))
+            .build
+            .useForever
+        }
       }
   }
 }

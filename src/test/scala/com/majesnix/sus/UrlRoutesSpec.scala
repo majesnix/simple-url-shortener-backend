@@ -13,17 +13,26 @@ import org.http4s.server.middleware.ErrorHandling
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
+import java.time.OffsetDateTime
 import scala.collection.mutable
 
 class UrlRoutesSpec extends AnyFlatSpec with Matchers {
 
   private def inMemoryRepo: UrlRepository = new UrlRepository {
-    private val store = mutable.Map.empty[String, String]
-    def insertShortUrl(short: String, url: String): IO[Boolean] = IO {
-      if (store.contains(short)) false else { store(short) = url; true }
+    private val store = mutable.Map.empty[String, (String, Option[OffsetDateTime])]
+    def insertShortUrl(short: String, url: String, expiresAt: Option[OffsetDateTime]): IO[Boolean] = IO {
+      if (store.contains(short)) false else { store(short) = (url, expiresAt); true }
     }
     def resolveShortUrl(short: String): IO[Option[UrlDTO]] = IO {
-      store.get(short).map(UrlDTO(_))
+      store.get(short).collect {
+        case (url, None)            => UrlDTO(url)
+        case (url, Some(expiresAt)) if expiresAt.isAfter(OffsetDateTime.now()) => UrlDTO(url)
+      }
+    }
+    def deleteExpiredUrls(): IO[Int] = IO {
+      val expired = store.filter { case (_, (_, exp)) => exp.exists(!_.isAfter(OffsetDateTime.now())) }
+      expired.keys.foreach(store.remove)
+      expired.size
     }
   }
 
@@ -62,6 +71,42 @@ class UrlRoutesSpec extends AnyFlatSpec with Matchers {
     val resp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com/path")))
     resp.status shouldBe Status.Ok
     asJson(resp).hcursor.get[String]("short").isRight shouldBe true
+  }
+
+  it should "create a short URL with a 1d expiry" in {
+    val app  = UrlRoutes.routes(inMemoryRepo)
+    val resp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com"), "expiry" -> Json.fromString("1d")))
+    resp.status shouldBe Status.Ok
+  }
+
+  it should "create a short URL with a 1w expiry" in {
+    val app  = UrlRoutes.routes(inMemoryRepo)
+    val resp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com"), "expiry" -> Json.fromString("1w")))
+    resp.status shouldBe Status.Ok
+  }
+
+  it should "create a short URL with a 1m expiry" in {
+    val app  = UrlRoutes.routes(inMemoryRepo)
+    val resp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com"), "expiry" -> Json.fromString("1m")))
+    resp.status shouldBe Status.Ok
+  }
+
+  it should "create a short URL with a 1y expiry" in {
+    val app  = UrlRoutes.routes(inMemoryRepo)
+    val resp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com"), "expiry" -> Json.fromString("1y")))
+    resp.status shouldBe Status.Ok
+  }
+
+  it should "create a short URL with an explicit unlimited expiry" in {
+    val app  = UrlRoutes.routes(inMemoryRepo)
+    val resp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com"), "expiry" -> Json.fromString("unlimited")))
+    resp.status shouldBe Status.Ok
+  }
+
+  it should "return 400 for an invalid expiry value" in {
+    val app  = UrlRoutes.routes(inMemoryRepo)
+    val resp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com"), "expiry" -> Json.fromString("2d")))
+    resp.status shouldBe Status.BadRequest
   }
 
   it should "return 400 for a URL pointing at the server host" in {
