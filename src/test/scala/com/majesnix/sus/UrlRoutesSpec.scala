@@ -34,6 +34,10 @@ class UrlRoutesSpec extends AnyFlatSpec with Matchers {
       expired.keys.foreach(store.remove)
       expired.size
     }
+    def listAllUrls(): IO[List[(String, String)]] = IO {
+      store.toList.map { case (short, (url, _)) => (short, url) }
+    }
+    def deleteByShort(short: String): IO[Unit] = IO { store.remove(short); () }
   }
 
   private def withErrorRecovery(app: HttpApp[IO]): HttpApp[IO] =

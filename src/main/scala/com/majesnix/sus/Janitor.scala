@@ -1,6 +1,7 @@
 package com.majesnix.sus
 
 import cats.effect.IO
+import com.majesnix.sus.models.UrlDTO
 import com.majesnix.sus.persistance.UrlRepository
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.slf4j.Slf4jFactory
@@ -18,6 +19,15 @@ object Janitor {
     java.time.Duration.between(now, midnight).toMillis.milliseconds
   }
 
+  private[sus] def removeInvalidUrls(dao: UrlRepository): IO[Unit] =
+    dao.listAllUrls()
+      .flatMap { urls =>
+        val invalid = urls.filterNot { case (_, long) => UrlDTO.valid(long) }
+        invalid.foldLeft(IO.unit) { (acc, entry) => acc.flatMap(_ => dao.deleteByShort(entry._1)) }
+          .flatMap(_ => logger.info(s"Janitor removed ${invalid.size} invalid URL(s)"))
+      }
+      .handleErrorWith(e => logger.warn(e)("Janitor invalid-URL sweep failed"))
+
   def run(dao: UrlRepository): IO[Nothing] = {
     val step: IO[Unit] =
       IO(timeUntilMidnightUTC)
@@ -25,7 +35,8 @@ object Janitor {
         .flatMap { _ =>
           dao.deleteExpiredUrls()
             .flatMap(n => logger.info(s"Janitor deleted $n expired URL(s)"))
-            .handleErrorWith(e => logger.warn(e)("Janitor run failed"))
+            .handleErrorWith(e => logger.warn(e)("Janitor expired-URL sweep failed"))
+            .flatMap(_ => removeInvalidUrls(dao))
         }
     step.foreverM
   }
