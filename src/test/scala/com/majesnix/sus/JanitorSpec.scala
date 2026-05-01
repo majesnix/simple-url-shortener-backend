@@ -13,17 +13,17 @@ import scala.collection.mutable
 class JanitorSpec extends AnyFlatSpec with Matchers {
 
   private def makeRepo(initial: Map[String, String]): UrlRepository = new UrlRepository {
-    private val store = mutable.Map.from(initial.view.mapValues(url => (url, Option.empty[OffsetDateTime])))
+    private val store = mutable.Map.from(initial.view.mapValues(url => (url, Option.empty[OffsetDateTime], false)))
 
-    def insertShortUrl(short: String, url: String, expiresAt: Option[OffsetDateTime]): IO[Boolean] = IO {
-      if (store.contains(short)) false else { store(short) = (url, expiresAt); true }
+    def insertShortUrl(short: String, url: String, expiresAt: Option[OffsetDateTime], oneTime: Boolean): IO[Boolean] = IO {
+      if (store.contains(short)) false else { store(short) = (url, expiresAt, oneTime); true }
     }
     def resolveShortUrl(short: String): IO[Option[UrlDTO]] = IO {
-      store.get(short).map { case (url, _) => UrlDTO(url) }
+      store.get(short).map { case (url, _, _) => UrlDTO(url) }
     }
     def deleteExpiredUrls(): IO[Int] = IO.pure(0)
     def listAllUrls(): IO[List[(String, String)]] = IO {
-      store.toList.map { case (short, (url, _)) => (short, url) }
+      store.toList.map { case (short, (url, _, _)) => (short, url) }
     }
     def deleteByShort(short: String): IO[Unit] = IO { store.remove(short); () }
   }

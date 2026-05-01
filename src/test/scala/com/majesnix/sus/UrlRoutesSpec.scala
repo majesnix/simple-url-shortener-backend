@@ -19,23 +19,27 @@ import scala.collection.mutable
 class UrlRoutesSpec extends AnyFlatSpec with Matchers {
 
   private def inMemoryRepo: UrlRepository = new UrlRepository {
-    private val store = mutable.Map.empty[String, (String, Option[OffsetDateTime])]
-    def insertShortUrl(short: String, url: String, expiresAt: Option[OffsetDateTime]): IO[Boolean] = IO {
-      if (store.contains(short)) false else { store(short) = (url, expiresAt); true }
+    private val store = mutable.Map.empty[String, (String, Option[OffsetDateTime], Boolean)]
+    def insertShortUrl(short: String, url: String, expiresAt: Option[OffsetDateTime], oneTime: Boolean): IO[Boolean] = IO {
+      if (store.contains(short)) false else { store(short) = (url, expiresAt, oneTime); true }
     }
     def resolveShortUrl(short: String): IO[Option[UrlDTO]] = IO {
-      store.get(short).collect {
-        case (url, None)            => UrlDTO(url)
-        case (url, Some(expiresAt)) if expiresAt.isAfter(OffsetDateTime.now()) => UrlDTO(url)
+      store.get(short).flatMap {
+        case (url, _, true) =>
+          store.remove(short)
+          Some(UrlDTO(url))
+        case (url, None, false)                                                    => Some(UrlDTO(url))
+        case (url, Some(expiresAt), false) if expiresAt.isAfter(OffsetDateTime.now()) => Some(UrlDTO(url))
+        case _                                                                     => None
       }
     }
     def deleteExpiredUrls(): IO[Int] = IO {
-      val expired = store.filter { case (_, (_, exp)) => exp.exists(!_.isAfter(OffsetDateTime.now())) }
+      val expired = store.filter { case (_, (_, exp, _)) => exp.exists(!_.isAfter(OffsetDateTime.now())) }
       expired.keys.foreach(store.remove)
       expired.size
     }
     def listAllUrls(): IO[List[(String, String)]] = IO {
-      store.toList.map { case (short, (url, _)) => (short, url) }
+      store.toList.map { case (short, (url, _, _)) => (short, url) }
     }
     def deleteByShort(short: String): IO[Unit] = IO { store.remove(short); () }
   }
@@ -107,6 +111,13 @@ class UrlRoutesSpec extends AnyFlatSpec with Matchers {
     resp.status shouldBe Status.Ok
   }
 
+  it should "create a one-time URL with a 1x expiry" in {
+    val app  = UrlRoutes.routes(inMemoryRepo)
+    val resp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com"), "expiry" -> Json.fromString("1x")))
+    resp.status shouldBe Status.Ok
+    asJson(resp).hcursor.get[String]("short").isRight shouldBe true
+  }
+
   it should "return 400 for an invalid expiry value" in {
     val app  = UrlRoutes.routes(inMemoryRepo)
     val resp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com"), "expiry" -> Json.fromString("2d")))
@@ -153,5 +164,19 @@ class UrlRoutesSpec extends AnyFlatSpec with Matchers {
     val app  = UrlRoutes.routes(inMemoryRepo)
     val resp = exec(app, Request(Method.GET, uri"/doesnotexist"))
     resp.status shouldBe Status.NotFound
+  }
+
+  it should "return 404 on the second access for a one-time URL" in {
+    val repo = inMemoryRepo
+    val app  = UrlRoutes.routes(repo)
+
+    val createResp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com"), "expiry" -> Json.fromString("1x")))
+    val short      = asJson(createResp).hcursor.get[String]("short").toOption.get
+
+    val firstResp = exec(app, Request(Method.GET, Uri.unsafeFromString(s"/$short")))
+    firstResp.status shouldBe Status.Ok
+
+    val secondResp = exec(app, Request(Method.GET, Uri.unsafeFromString(s"/$short")))
+    secondResp.status shouldBe Status.NotFound
   }
 }

@@ -10,7 +10,7 @@ import skunk.implicits._
 import java.time.OffsetDateTime
 
 trait UrlRepository {
-  def insertShortUrl(short: String, url: String, expiresAt: Option[OffsetDateTime]): IO[Boolean]
+  def insertShortUrl(short: String, url: String, expiresAt: Option[OffsetDateTime], oneTime: Boolean): IO[Boolean]
   def resolveShortUrl(short: String): IO[Option[UrlDTO]]
   def deleteExpiredUrls(): IO[Int]
   def listAllUrls(): IO[List[(String, String)]]
@@ -19,16 +19,21 @@ trait UrlRepository {
 
 class UrlDAO(sessions: Resource[IO, Session[IO]]) extends UrlRepository {
 
-  private case class UrlRecord(short: String, url: String, expiresAt: Option[OffsetDateTime])
-  private val urlRecord = (varchar *: text *: timestamptz.opt).values.to[UrlRecord]
+  private case class UrlRecord(short: String, url: String, expiresAt: Option[OffsetDateTime], oneTime: Boolean)
+  private val urlRecord = (varchar *: text *: timestamptz.opt *: bool).values.to[UrlRecord]
 
   private case class ShortAndLong(short: String, long: String)
 
   private val insertShortUrlCommand: Command[UrlRecord] =
-    sql"INSERT INTO t_url (short, long, expires_at) VALUES $urlRecord".command
+    sql"INSERT INTO t_url (short, long, expires_at, one_time) VALUES $urlRecord".command
 
-  private val resolveShortUrlQuery: Query[String, UrlDTO] =
-    sql"SELECT long FROM t_url WHERE short = $varchar AND (expires_at IS NULL OR expires_at > NOW())"
+  private val claimOneTimeQuery: Query[String, UrlDTO] =
+    sql"DELETE FROM t_url WHERE short = $varchar AND one_time = TRUE RETURNING long"
+      .query(text)
+      .to[UrlDTO]
+
+  private val resolveRegularQuery: Query[String, UrlDTO] =
+    sql"SELECT long FROM t_url WHERE short = $varchar AND one_time = FALSE AND (expires_at IS NULL OR expires_at > NOW())"
       .query(text)
       .to[UrlDTO]
 
@@ -43,14 +48,17 @@ class UrlDAO(sessions: Resource[IO, Session[IO]]) extends UrlRepository {
   private val deleteByShortCommand: Command[String] =
     sql"DELETE FROM t_url WHERE short = $varchar".command
 
-  def insertShortUrl(short: String, url: String, expiresAt: Option[OffsetDateTime]): IO[Boolean] =
+  def insertShortUrl(short: String, url: String, expiresAt: Option[OffsetDateTime], oneTime: Boolean): IO[Boolean] =
     sessions.use { s =>
-      s.execute(insertShortUrlCommand)(UrlRecord(short, url, expiresAt)).as(true)
+      s.execute(insertShortUrlCommand)(UrlRecord(short, url, expiresAt, oneTime)).as(true)
     }.recover { case SqlState.UniqueViolation(_) => false }
 
   def resolveShortUrl(short: String): IO[Option[UrlDTO]] =
     sessions.use { s =>
-      s.prepare(resolveShortUrlQuery).flatMap(_.option(short))
+      s.prepare(claimOneTimeQuery).flatMap(_.option(short)).flatMap {
+        case some @ Some(_) => IO.pure(some)
+        case None           => s.prepare(resolveRegularQuery).flatMap(_.option(short))
+      }
     }
 
   def deleteExpiredUrls(): IO[Int] =

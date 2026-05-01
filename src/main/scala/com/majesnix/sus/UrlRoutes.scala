@@ -24,15 +24,16 @@ object UrlRoutes {
       dao: UrlRepository,
       url: String,
       expiresAt: Option[OffsetDateTime],
+      oneTime: Boolean,
       attemptsLeft: Int
   ): IO[Option[String]] =
     if (attemptsLeft <= 0) IO.pure(None)
     else
       for {
         short    <- generateId(ShortLength)
-        inserted <- dao.insertShortUrl(short, url, expiresAt)
+        inserted <- dao.insertShortUrl(short, url, expiresAt, oneTime)
         result   <- if (inserted) IO.pure(Some(short))
-                    else createWithRetry(dao, url, expiresAt, attemptsLeft - 1)
+                    else createWithRetry(dao, url, expiresAt, oneTime, attemptsLeft - 1)
       } yield result
 
   def routes(dao: UrlRepository): HttpApp[IO] =
@@ -49,7 +50,8 @@ object UrlRoutes {
               else if (!CreateUrlRequest.validExpiry(expiry)) BadRequest("Invalid expiry")
               else {
                 val expiresAt = CreateUrlRequest.toExpiresAt(expiry)
-                createWithRetry(dao, url, expiresAt, MaxInsertAttempts).flatMap {
+                val oneTime   = CreateUrlRequest.isOneTime(expiry)
+                createWithRetry(dao, url, expiresAt, oneTime, MaxInsertAttempts).flatMap {
                   case Some(short) => Ok(ShortenResponse(short = short).asJson)
                   case None        => InternalServerError("Could not generate a unique short URL")
                 }

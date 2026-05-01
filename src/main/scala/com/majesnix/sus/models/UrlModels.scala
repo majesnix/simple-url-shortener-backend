@@ -12,10 +12,12 @@ case class ShortenResponse(short: String)
 case class CreateUrlRequest(url: String, expiry: Option[String] = None)
 
 object CreateUrlRequest {
-  private val AllowedExpiry = Set("1d", "1w", "1m", "1y", "unlimited")
+  private val AllowedExpiry = Set("1d", "1w", "1m", "1y", "unlimited", "1x")
 
   def validExpiry(expiry: Option[String]): Boolean =
     expiry.forall(AllowedExpiry.contains)
+
+  def isOneTime(expiry: Option[String]): Boolean = expiry.contains("1x")
 
   def toExpiresAt(expiry: Option[String]): Option[OffsetDateTime] = {
     val now = OffsetDateTime.now(ZoneOffset.UTC)
@@ -25,6 +27,7 @@ object CreateUrlRequest {
       case "1m"        => Some(now.plusMonths(1))
       case "1y"        => Some(now.plusYears(1))
       case "unlimited" => None
+      case "1x"        => None
       case _           => None
     }
   }
