@@ -20,7 +20,7 @@ trait UrlRepository {
 class UrlDAO(sessions: Resource[IO, Session[IO]]) extends UrlRepository {
 
   private case class UrlRecord(short: String, url: String, expiresAt: Option[OffsetDateTime], oneTime: Boolean)
-  private val urlRecord = (varchar *: text *: timestamptz.opt *: bool).values.to[UrlRecord]
+  private val urlRecord = (text *: text *: timestamptz.opt *: bool).values.to[UrlRecord]
 
   private case class ShortAndLong(short: String, long: String)
 
@@ -28,12 +28,12 @@ class UrlDAO(sessions: Resource[IO, Session[IO]]) extends UrlRepository {
     sql"INSERT INTO t_url (short, long, expires_at, one_time) VALUES $urlRecord".command
 
   private val claimOneTimeQuery: Query[String, UrlDTO] =
-    sql"DELETE FROM t_url WHERE short = $varchar AND one_time = TRUE RETURNING long"
+    sql"DELETE FROM t_url WHERE short = $text AND one_time = TRUE RETURNING long"
       .query(text)
       .to[UrlDTO]
 
   private val resolveRegularQuery: Query[String, UrlDTO] =
-    sql"SELECT long FROM t_url WHERE short = $varchar AND one_time = FALSE AND (expires_at IS NULL OR expires_at > NOW())"
+    sql"SELECT long FROM t_url WHERE short = $text AND one_time = FALSE AND (expires_at IS NULL OR expires_at > NOW())"
       .query(text)
       .to[UrlDTO]
 
@@ -42,11 +42,11 @@ class UrlDAO(sessions: Resource[IO, Session[IO]]) extends UrlRepository {
 
   private val listAllUrlsQuery: Query[Void, ShortAndLong] =
     sql"SELECT short, long FROM t_url WHERE (expires_at IS NULL OR expires_at > NOW())"
-      .query(varchar *: text)
+      .query(text *: text)
       .to[ShortAndLong]
 
   private val deleteByShortCommand: Command[String] =
-    sql"DELETE FROM t_url WHERE short = $varchar".command
+    sql"DELETE FROM t_url WHERE short = $text".command
 
   def insertShortUrl(short: String, url: String, expiresAt: Option[OffsetDateTime], oneTime: Boolean): IO[Boolean] =
     sessions.use { s =>
