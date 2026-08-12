@@ -44,7 +44,7 @@ jobs:
           sbt runItTest
 
       - name: Build and publish
-        if: contains(github.ref, 'main')
+        if: github.ref == 'refs/heads/main'
         run: |
           sbt docker:publish
 
