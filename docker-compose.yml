@@ -16,7 +16,7 @@ services:
       start_period: 30s
       timeout: 10s
   backend:
-    image: codingbros/sus-backend:2.1.2
+    image: codingbros/sus-backend:2.1.3
     ports:
       - "8080:8080"
     environment:

@@ -7,7 +7,7 @@ ThisBuild / scalaVersion := "2.13.18"
 enablePlugins(JavaServerAppPackaging)
 
 Docker / packageName := "sus-backend"
-Docker / version := "2.1.2"
+Docker / version := "2.1.3"
 dockerUpdateLatest := true
 dockerBuildxPlatforms := Seq("linux/arm64/v8", "linux/amd64")
 
