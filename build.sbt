@@ -59,15 +59,18 @@ lazy val it = (project in file("it"))
     )
   )
 
+// SUS_VERSION keeps docker-compose.yml on the image tag defined here.
 lazy val deployContainers = taskKey[Unit]("Deploy containers")
 deployContainers := {
-  Process(s"docker compose up -d").!
+  Process("docker compose up -d", None, "SUS_VERSION" -> (Docker / version).value).!
   println(s"Waiting for containers to be up and running (5 sec)")
   Thread.sleep(5000)
 }
 
 lazy val stopContainers = taskKey[Unit]("Stop containers")
-stopContainers := Process(s"docker compose down").!
+stopContainers := Process("docker compose down", None, "SUS_VERSION" -> (Docker / version).value).!
 
 lazy val runItTest = taskKey[Unit]("Build image, deploy containers, run it tests and stop afterwards")
-runItTest := (stopContainers dependsOn it/Test/test dependsOn deployContainers dependsOn Docker/publishLocal).value
+// Def.sequential guarantees the ordering that dependsOn chaining does not:
+// build the image, start the containers, run the tests, then tear down.
+runItTest := Def.sequential(Docker / publishLocal, deployContainers, it / Test / test, stopContainers).value
