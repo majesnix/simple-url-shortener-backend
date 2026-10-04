@@ -95,4 +95,53 @@ class Tests extends AnyFlatSpec {
 
     assert(response.code.isClientError)
   }
+
+  private def shorten(body: ujson.Value) =
+    quickRequest
+      .post(uri"http://localhost:8080")
+      .header("Content-Type", "application/json")
+      .body(ujson.write(body))
+      .send()
+
+  private def resolve(short: String) =
+    quickRequest.get(uri"http://localhost:8080/$short").send()
+
+  it should "resolve a link with an expiry" in {
+    val created =
+      shorten(ujson.Obj("url" -> "https://foo.com/expiring", "expiry" -> "1d"))
+    assert(created.code == StatusCode.Ok)
+    val resolved = resolve(ujson.read(created.body)("short").str)
+    assert(resolved.code == StatusCode.Ok)
+    assert(ujson.read(resolved.body)("url").str == "https://foo.com/expiring")
+  }
+
+  it should "resolve a one-time link exactly once" in {
+    val created =
+      shorten(ujson.Obj("url" -> "https://foo.com/once", "expiry" -> "1x"))
+    assert(created.code == StatusCode.Ok)
+    val short = ujson.read(created.body)("short").str
+
+    val first = resolve(short)
+    assert(first.code == StatusCode.Ok)
+    assert(ujson.read(first.body)("url").str == "https://foo.com/once")
+
+    assert(resolve(short).code == StatusCode.NotFound)
+  }
+
+  it should "reject an unknown expiry value" in {
+    val created =
+      shorten(ujson.Obj("url" -> "https://foo.com", "expiry" -> "2d"))
+    assert(created.code == StatusCode.BadRequest)
+  }
+
+  it should "deny shortening the configured SERVER_URL host" in {
+    val created = shorten(ujson.Obj("url" -> "https://sus.local/some/link"))
+    assert(created.code == StatusCode.BadRequest)
+  }
+
+  it should "reject oversized request bodies with 413" in {
+    val created =
+      shorten(ujson.Obj("url" -> ("https://foo.com/" + "a" * 20000)))
+    assert(created.code == StatusCode.PayloadTooLarge)
+  }
 }

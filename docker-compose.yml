@@ -23,9 +23,11 @@ services:
       - "8080:8080"
     environment:
       - DB_HOST=db
-      # Set to the public hostname of this deployment so the guard against
-      # shortening the shortener's own links works, e.g.:
-      # - SERVER_URL=sus.example.com
+      # Public hostname of this deployment; links to it are rejected.
+      - SERVER_URL=${SERVER_URL:-sus.local}
+      # Behind a reverse proxy, also set e.g.:
+      # - CORS_ORIGINS=https://sus.example.com
+      # - RATE_LIMIT_FORWARDED_FOR_HOPS=1
     depends_on:
       db:
         condition: service_healthy
