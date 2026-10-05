@@ -16,20 +16,20 @@ object NanoId {
   private lazy val defaultSize = 21
 
   /** Generates a nanoId with default size (21)
-   *
-   * @return
-   * nanoId
-   */
+    *
+    * @return
+    *   nanoId
+    */
   def generateId: IO[String] =
     generateId(defaultNumberGenerator, defaultAlphabet, defaultSize)
 
   /** Generates a nanoId with of the given size
-   *
-   * @param size
-   * length of generated nanoId
-   * @return
-   * nanoId
-   */
+    *
+    * @param size
+    *   length of generated nanoId
+    * @return
+    *   nanoId
+    */
   def generateId(size: Int): IO[String] =
     generateId(defaultNumberGenerator, defaultAlphabet, size)
 
@@ -43,7 +43,11 @@ object NanoId {
     * @return
     *   nanoId
     */
-  def generateId(random: Random, alphabet: Vector[Char], size: Int): IO[String] = for {
+  def generateId(
+      random: Random,
+      alphabet: Vector[Char],
+      size: Int
+  ): IO[String] = for {
     id <- generateGeneric(
       size => {
         val bytes: Array[Byte] = new Array[Byte](size)

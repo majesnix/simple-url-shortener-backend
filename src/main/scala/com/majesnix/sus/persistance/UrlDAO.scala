@@ -10,8 +10,17 @@ import skunk.implicits._
 import java.time.OffsetDateTime
 
 trait UrlRepository {
-  def insertShortUrl(short: String, url: String, expiresAt: Option[OffsetDateTime], oneTime: Boolean): IO[Boolean]
-  def resolveShortUrl(short: String): IO[Option[UrlDTO]]
+  def insertShortUrl(
+      short: String,
+      url: String,
+      expiresAt: Option[OffsetDateTime],
+      oneTime: Boolean
+  ): IO[Boolean]
+
+  /** Resolves a short. With claimOneTime = false (e.g. link-preview bots)
+    * one-time rows are neither revealed nor consumed.
+    */
+  def resolveShortUrl(short: String, claimOneTime: Boolean): IO[Option[UrlDTO]]
   def deleteExpiredUrls(): IO[Int]
   def listAllUrls(): IO[List[(String, String)]]
   def deleteByShort(short: String): IO[Unit]
@@ -19,8 +28,14 @@ trait UrlRepository {
 
 class UrlDAO(sessions: Resource[IO, Session[IO]]) extends UrlRepository {
 
-  private case class UrlRecord(short: String, url: String, expiresAt: Option[OffsetDateTime], oneTime: Boolean)
-  private val urlRecord = (text *: text *: timestamptz.opt *: bool).values.to[UrlRecord]
+  private case class UrlRecord(
+      short: String,
+      url: String,
+      expiresAt: Option[OffsetDateTime],
+      oneTime: Boolean
+  )
+  private val urlRecord =
+    (text *: text *: timestamptz.opt *: bool).values.to[UrlRecord]
 
   private case class ShortAndLong(short: String, long: String)
 
@@ -28,7 +43,7 @@ class UrlDAO(sessions: Resource[IO, Session[IO]]) extends UrlRepository {
     sql"INSERT INTO t_url (short, long, expires_at, one_time) VALUES $urlRecord".command
 
   private val claimOneTimeQuery: Query[String, UrlDTO] =
-    sql"DELETE FROM t_url WHERE short = $text AND one_time = TRUE RETURNING long"
+    sql"DELETE FROM t_url WHERE short = $text AND one_time = TRUE AND (expires_at IS NULL OR expires_at > NOW()) RETURNING long"
       .query(text)
       .to[UrlDTO]
 
@@ -48,24 +63,39 @@ class UrlDAO(sessions: Resource[IO, Session[IO]]) extends UrlRepository {
   private val deleteByShortCommand: Command[String] =
     sql"DELETE FROM t_url WHERE short = $text".command
 
-  def insertShortUrl(short: String, url: String, expiresAt: Option[OffsetDateTime], oneTime: Boolean): IO[Boolean] =
-    sessions.use { s =>
-      s.execute(insertShortUrlCommand)(UrlRecord(short, url, expiresAt, oneTime)).as(true)
-    }.recover { case SqlState.UniqueViolation(_) => false }
-
-  def resolveShortUrl(short: String): IO[Option[UrlDTO]] =
-    sessions.use { s =>
-      s.prepare(claimOneTimeQuery).flatMap(_.option(short)).flatMap {
-        case some @ Some(_) => IO.pure(some)
-        case None           => s.prepare(resolveRegularQuery).flatMap(_.option(short))
+  def insertShortUrl(
+      short: String,
+      url: String,
+      expiresAt: Option[OffsetDateTime],
+      oneTime: Boolean
+  ): IO[Boolean] =
+    sessions
+      .use { s =>
+        s.execute(insertShortUrlCommand)(
+          UrlRecord(short, url, expiresAt, oneTime)
+        ).as(true)
       }
+      .recover { case SqlState.UniqueViolation(_) => false }
+
+  def resolveShortUrl(
+      short: String,
+      claimOneTime: Boolean
+  ): IO[Option[UrlDTO]] =
+    sessions.use { s =>
+      if (claimOneTime)
+        s.prepare(claimOneTimeQuery).flatMap(_.option(short)).flatMap {
+          case some @ Some(_) => IO.pure(some)
+          case None => s.prepare(resolveRegularQuery).flatMap(_.option(short))
+        }
+      else
+        s.prepare(resolveRegularQuery).flatMap(_.option(short))
     }
 
   def deleteExpiredUrls(): IO[Int] =
     sessions.use { s =>
       s.execute(deleteExpiredCommand).map {
         case Completion.Delete(n) => n
-        case _                   => 0
+        case _                    => 0
       }
     }
 

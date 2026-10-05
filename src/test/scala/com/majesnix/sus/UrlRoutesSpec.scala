@@ -12,6 +12,7 @@ import org.http4s.implicits._
 import org.http4s.server.middleware.ErrorHandling
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.typelevel.ci._
 
 import java.time.OffsetDateTime
 import scala.collection.mutable
@@ -19,22 +20,37 @@ import scala.collection.mutable
 class UrlRoutesSpec extends AnyFlatSpec with Matchers {
 
   private def inMemoryRepo: UrlRepository = new UrlRepository {
-    private val store = mutable.Map.empty[String, (String, Option[OffsetDateTime], Boolean)]
-    def insertShortUrl(short: String, url: String, expiresAt: Option[OffsetDateTime], oneTime: Boolean): IO[Boolean] = IO {
-      if (store.contains(short)) false else { store(short) = (url, expiresAt, oneTime); true }
+    private val store =
+      mutable.Map.empty[String, (String, Option[OffsetDateTime], Boolean)]
+    def insertShortUrl(
+        short: String,
+        url: String,
+        expiresAt: Option[OffsetDateTime],
+        oneTime: Boolean
+    ): IO[Boolean] = IO {
+      if (store.contains(short)) false
+      else { store(short) = (url, expiresAt, oneTime); true }
     }
-    def resolveShortUrl(short: String): IO[Option[UrlDTO]] = IO {
+    def resolveShortUrl(
+        short: String,
+        claimOneTime: Boolean
+    ): IO[Option[UrlDTO]] = IO {
       store.get(short).flatMap {
-        case (url, _, true) =>
+        case (url, _, true) if claimOneTime =>
           store.remove(short)
           Some(UrlDTO(url))
-        case (url, None, false)                                                    => Some(UrlDTO(url))
-        case (url, Some(expiresAt), false) if expiresAt.isAfter(OffsetDateTime.now()) => Some(UrlDTO(url))
-        case _                                                                     => None
+        case (_, _, true)       => None
+        case (url, None, false) => Some(UrlDTO(url))
+        case (url, Some(expiresAt), false)
+            if expiresAt.isAfter(OffsetDateTime.now()) =>
+          Some(UrlDTO(url))
+        case _ => None
       }
     }
     def deleteExpiredUrls(): IO[Int] = IO {
-      val expired = store.filter { case (_, (_, exp, _)) => exp.exists(!_.isAfter(OffsetDateTime.now())) }
+      val expired = store.filter { case (_, (_, exp, _)) =>
+        exp.exists(!_.isAfter(OffsetDateTime.now()))
+      }
       expired.keys.foreach(store.remove)
       expired.size
     }
@@ -68,115 +84,206 @@ class UrlRoutesSpec extends AnyFlatSpec with Matchers {
     )
 
   "GET /health" should "return 200 OK" in {
-    val app  = UrlRoutes.routes(inMemoryRepo)
+    val app = UrlRoutes.routes(inMemoryRepo)
     val resp = exec(app, Request(Method.GET, uri"/health"))
     resp.status shouldBe Status.Ok
     resp.as[String].unsafeRunSync() shouldBe "OK"
   }
 
   "POST /" should "create a short URL for a valid URL and return its key" in {
-    val app  = UrlRoutes.routes(inMemoryRepo)
-    val resp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com/path")))
+    val app = UrlRoutes.routes(inMemoryRepo)
+    val resp = jsonPost(
+      app,
+      Json.obj("url" -> Json.fromString("https://example.com/path"))
+    )
     resp.status shouldBe Status.Ok
     asJson(resp).hcursor.get[String]("short").isRight shouldBe true
   }
 
   it should "create a short URL with a 1d expiry" in {
-    val app  = UrlRoutes.routes(inMemoryRepo)
-    val resp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com"), "expiry" -> Json.fromString("1d")))
+    val app = UrlRoutes.routes(inMemoryRepo)
+    val resp = jsonPost(
+      app,
+      Json.obj(
+        "url" -> Json.fromString("https://example.com"),
+        "expiry" -> Json.fromString("1d")
+      )
+    )
     resp.status shouldBe Status.Ok
   }
 
   it should "create a short URL with a 1w expiry" in {
-    val app  = UrlRoutes.routes(inMemoryRepo)
-    val resp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com"), "expiry" -> Json.fromString("1w")))
+    val app = UrlRoutes.routes(inMemoryRepo)
+    val resp = jsonPost(
+      app,
+      Json.obj(
+        "url" -> Json.fromString("https://example.com"),
+        "expiry" -> Json.fromString("1w")
+      )
+    )
     resp.status shouldBe Status.Ok
   }
 
   it should "create a short URL with a 1m expiry" in {
-    val app  = UrlRoutes.routes(inMemoryRepo)
-    val resp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com"), "expiry" -> Json.fromString("1m")))
+    val app = UrlRoutes.routes(inMemoryRepo)
+    val resp = jsonPost(
+      app,
+      Json.obj(
+        "url" -> Json.fromString("https://example.com"),
+        "expiry" -> Json.fromString("1m")
+      )
+    )
     resp.status shouldBe Status.Ok
   }
 
   it should "create a short URL with a 1y expiry" in {
-    val app  = UrlRoutes.routes(inMemoryRepo)
-    val resp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com"), "expiry" -> Json.fromString("1y")))
+    val app = UrlRoutes.routes(inMemoryRepo)
+    val resp = jsonPost(
+      app,
+      Json.obj(
+        "url" -> Json.fromString("https://example.com"),
+        "expiry" -> Json.fromString("1y")
+      )
+    )
     resp.status shouldBe Status.Ok
   }
 
   it should "create a short URL with an explicit unlimited expiry" in {
-    val app  = UrlRoutes.routes(inMemoryRepo)
-    val resp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com"), "expiry" -> Json.fromString("unlimited")))
+    val app = UrlRoutes.routes(inMemoryRepo)
+    val resp = jsonPost(
+      app,
+      Json.obj(
+        "url" -> Json.fromString("https://example.com"),
+        "expiry" -> Json.fromString("unlimited")
+      )
+    )
     resp.status shouldBe Status.Ok
   }
 
   it should "create a one-time URL with a 1x expiry" in {
-    val app  = UrlRoutes.routes(inMemoryRepo)
-    val resp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com"), "expiry" -> Json.fromString("1x")))
+    val app = UrlRoutes.routes(inMemoryRepo)
+    val resp = jsonPost(
+      app,
+      Json.obj(
+        "url" -> Json.fromString("https://example.com"),
+        "expiry" -> Json.fromString("1x")
+      )
+    )
     resp.status shouldBe Status.Ok
     asJson(resp).hcursor.get[String]("short").isRight shouldBe true
   }
 
   it should "return 400 for an invalid expiry value" in {
-    val app  = UrlRoutes.routes(inMemoryRepo)
-    val resp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com"), "expiry" -> Json.fromString("2d")))
+    val app = UrlRoutes.routes(inMemoryRepo)
+    val resp = jsonPost(
+      app,
+      Json.obj(
+        "url" -> Json.fromString("https://example.com"),
+        "expiry" -> Json.fromString("2d")
+      )
+    )
     resp.status shouldBe Status.BadRequest
   }
 
   it should "return 400 for a URL pointing at the server host" in {
-    val app  = UrlRoutes.routes(inMemoryRepo)
-    val resp = jsonPost(app, Json.obj("url" -> Json.fromString("https://localhost/anything")))
+    val app = UrlRoutes.routes(inMemoryRepo)
+    val resp = jsonPost(
+      app,
+      Json.obj("url" -> Json.fromString("https://localhost/anything"))
+    )
     resp.status shouldBe Status.BadRequest
   }
 
   it should "return 400 for a disallowed scheme" in {
-    val app  = UrlRoutes.routes(inMemoryRepo)
-    val resp = jsonPost(app, Json.obj("url" -> Json.fromString("javascript:alert(1)")))
+    val app = UrlRoutes.routes(inMemoryRepo)
+    val resp =
+      jsonPost(app, Json.obj("url" -> Json.fromString("javascript:alert(1)")))
     resp.status shouldBe Status.BadRequest
   }
 
   it should "return 4xx for malformed JSON" in {
-    val app  = UrlRoutes.routes(inMemoryRepo)
+    val app = UrlRoutes.routes(inMemoryRepo)
     val resp = rawPost(app, "not json at all")
     isClientError(resp) shouldBe true
   }
 
   it should "return 4xx when the url field is absent" in {
-    val app  = UrlRoutes.routes(inMemoryRepo)
+    val app = UrlRoutes.routes(inMemoryRepo)
     val resp = jsonPost(app, Json.obj("other" -> Json.fromString("value")))
     isClientError(resp) shouldBe true
   }
 
   "GET /:short" should "return the original URL for a known short" in {
     val repo = inMemoryRepo
-    val app  = UrlRoutes.routes(repo)
+    val app = UrlRoutes.routes(repo)
 
-    val createResp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com")))
-    val short      = asJson(createResp).hcursor.get[String]("short").toOption.get
+    val createResp =
+      jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com")))
+    val short = asJson(createResp).hcursor.get[String]("short").toOption.get
 
-    val getResp = exec(app, Request(Method.GET, Uri.unsafeFromString(s"/$short")))
+    val getResp =
+      exec(app, Request(Method.GET, Uri.unsafeFromString(s"/$short")))
     getResp.status shouldBe Status.Ok
-    asJson(getResp).hcursor.get[String]("url").toOption shouldBe Some("https://example.com")
+    asJson(getResp).hcursor.get[String]("url").toOption shouldBe Some(
+      "https://example.com"
+    )
   }
 
   it should "return 404 for an unknown short" in {
-    val app  = UrlRoutes.routes(inMemoryRepo)
+    val app = UrlRoutes.routes(inMemoryRepo)
     val resp = exec(app, Request(Method.GET, uri"/doesnotexist"))
     resp.status shouldBe Status.NotFound
   }
 
   it should "return 404 on the second access for a one-time URL" in {
     val repo = inMemoryRepo
-    val app  = UrlRoutes.routes(repo)
+    val app = UrlRoutes.routes(repo)
 
-    val createResp = jsonPost(app, Json.obj("url" -> Json.fromString("https://example.com"), "expiry" -> Json.fromString("1x")))
-    val short      = asJson(createResp).hcursor.get[String]("short").toOption.get
+    val createResp = jsonPost(
+      app,
+      Json.obj(
+        "url" -> Json.fromString("https://example.com"),
+        "expiry" -> Json.fromString("1x")
+      )
+    )
+    val short = asJson(createResp).hcursor.get[String]("short").toOption.get
 
-    val firstResp = exec(app, Request(Method.GET, Uri.unsafeFromString(s"/$short")))
+    val firstResp =
+      exec(app, Request(Method.GET, Uri.unsafeFromString(s"/$short")))
     firstResp.status shouldBe Status.Ok
 
-    val secondResp = exec(app, Request(Method.GET, Uri.unsafeFromString(s"/$short")))
+    val secondResp =
+      exec(app, Request(Method.GET, Uri.unsafeFromString(s"/$short")))
     secondResp.status shouldBe Status.NotFound
+  }
+
+  it should "not let a link-preview bot consume a one-time URL" in {
+    val repo = inMemoryRepo
+    val app = UrlRoutes.routes(repo)
+
+    val createResp = jsonPost(
+      app,
+      Json.obj(
+        "url" -> Json.fromString("https://example.com"),
+        "expiry" -> Json.fromString("1x")
+      )
+    )
+    val short = asJson(createResp).hcursor.get[String]("short").toOption.get
+
+    val botResp = exec(
+      app,
+      Request[IO](Method.GET, Uri.unsafeFromString(s"/$short"))
+        .putHeaders(
+          Header.Raw(
+            ci"User-Agent",
+            "Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)"
+          )
+        )
+    )
+    botResp.status shouldBe Status.NotFound
+
+    val visitorResp =
+      exec(app, Request(Method.GET, Uri.unsafeFromString(s"/$short")))
+    visitorResp.status shouldBe Status.Ok
   }
 }

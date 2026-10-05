@@ -45,8 +45,38 @@ class UrlDTOSpec extends AnyFlatSpec with Matchers {
     UrlDTO.valid("http://127.0.0.1:8080/path") shouldBe false
     UrlDTO.valid("http://10.0.0.1") shouldBe false
     UrlDTO.valid("http://192.168.1.1") shouldBe false
-    UrlDTO.valid("http://169.254.169.254") shouldBe false  // AWS metadata
+    UrlDTO.valid("http://169.254.169.254") shouldBe false // AWS metadata
     UrlDTO.valid("http://[::1]/") shouldBe false
+  }
+
+  it should "reject non-dotted IPv4 loopback literals" in {
+    UrlDTO.valid(
+      "http://2130706433/"
+    ) shouldBe false // 127.0.0.1 as a decimal integer
+    UrlDTO.valid("http://127.1/") shouldBe false // inet_aton shorthand
+    UrlDTO.valid("http://0x7f000001/") shouldBe false // hex
+    UrlDTO.valid("http://0177.0.0.1/") shouldBe false // octal
+  }
+
+  it should "reject all-numeric hosts that are not parseable IPv4 addresses" in {
+    UrlDTO.valid("http://999.999.999.999/") shouldBe false
+    UrlDTO.valid("http://1.2.3.4.5/") shouldBe false
+  }
+
+  it should "reject unspecified addresses" in {
+    UrlDTO.valid("http://0/") shouldBe false
+    UrlDTO.valid("http://0.0.0.0/") shouldBe false
+    UrlDTO.valid("http://[::]/") shouldBe false
+  }
+
+  it should "reject IPv6 unique-local addresses" in {
+    UrlDTO.valid("http://[fd00::1]/") shouldBe false
+    UrlDTO.valid("http://[fc00::1]/") shouldBe false
+  }
+
+  it should "accept public IP literals" in {
+    UrlDTO.valid("http://8.8.8.8/") shouldBe true
+    UrlDTO.valid("http://[2606:4700::1111]/") shouldBe true
   }
 
   it should "reject URLs exceeding 2048 characters" in {
@@ -56,8 +86,19 @@ class UrlDTOSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "accept URLs up to 2048 characters" in {
-    val okUrl = "https://example.com/" + "a" * (2048 - "https://example.com/".length)
+    val okUrl =
+      "https://example.com/" + "a" * (2048 - "https://example.com/".length)
     okUrl.length shouldBe 2048
     UrlDTO.valid(okUrl) shouldBe true
+  }
+
+  "hostOf" should "extract the bare host from any server url config shape" in {
+    UrlDTO.hostOf("https://sus.example.com") shouldBe "sus.example.com"
+    UrlDTO.hostOf("sus.example.com:8443") shouldBe "sus.example.com"
+    UrlDTO.hostOf("localhost") shouldBe "localhost"
+  }
+
+  "toExpiresAt" should "give one-time links a bounded expiry" in {
+    CreateUrlRequest.toExpiresAt(Some("1x")) shouldBe defined
   }
 }
